@@ -111,9 +111,16 @@ export function DashboardClient({
   const [rows, setRows] = useState<RequestRow[]>([]);
   const [meetings, setMeetings] = useState<MeetingRow[]>([]);
   const [events, setEvents] = useState<BroadcastEvent[]>([]);
-  const [error, setError] = useState('');
-  const [ok, setOk] = useState('');
   const [loading, setLoading] = useState(false);
+  const [toasts, setToasts] = useState<{ id: string; type: 'success' | 'error' | 'info'; message: string }[]>([]);
+
+  function addToast(type: 'success' | 'error' | 'info', message: string) {
+    const id = Math.random().toString(36).slice(2, 9);
+    setToasts((prev) => [...prev, { id, type, message }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  }
 
   const [citizenName, setCitizenName] = useState('');
   const [citizenPhone, setCitizenPhone] = useState('');
@@ -173,11 +180,10 @@ export function DashboardClient({
 
   async function loadData() {
     setLoading(true);
-    setError('');
     try {
       await Promise.all([loadRequests(), loadMeetings(), loadEvents()]);
     } catch (e) {
-      setError((e as Error).message);
+      addToast('error', (e as Error).message);
     } finally {
       setLoading(false);
     }
@@ -251,11 +257,8 @@ export function DashboardClient({
 
   async function onCreateAndSchedule(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError('');
-    setOk('');
-
     if (availability.available === false) {
-      setError(availability.reason || 'Ese horario no está disponible.');
+      addToast('error', availability.reason || 'Ese horario no está disponible.');
       return;
     }
 
@@ -285,7 +288,7 @@ export function DashboardClient({
         throw new Error(payload.error ?? 'No se pudo crear y agendar');
       }
 
-      setOk('Solicitud y reunión agendadas. Recordatorios programados para 24h y 2h antes.');
+      addToast('success', 'Solicitud y reunión agendadas. Recordatorios programados.');
       setCitizenName('');
       setCitizenPhone('');
       setTopicOption('Servicios públicos');
@@ -298,17 +301,14 @@ export function DashboardClient({
       setLocation('');
       await loadData();
     } catch (e) {
-      setError((e as Error).message);
+      addToast('error', (e as Error).message);
     }
   }
 
   async function onCreateRequestOnly(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError('');
-    setOk('');
-
     if (startsAt && availability.available === false) {
-      setError(availability.reason || 'Ese horario no está disponible.');
+      addToast('error', availability.reason || 'Ese horario no está disponible.');
       return;
     }
 
@@ -335,7 +335,7 @@ export function DashboardClient({
       if (!response.ok) {
         throw new Error(payload.error ?? 'No se pudo crear solicitud');
       }
-      setOk('Solicitud enviada. Queda pendiente de confirmación por TL o ADMIN.');
+      addToast('success', 'Solicitud enviada. Queda pendiente de confirmación.');
       setCitizenName('');
       setCitizenPhone('');
       setTopicOption('Servicios públicos');
@@ -347,7 +347,7 @@ export function DashboardClient({
       setEndsAt('');
       await loadData();
     } catch (e) {
-      setError((e as Error).message);
+      addToast('error', (e as Error).message);
     }
   }
 
@@ -357,8 +357,6 @@ export function DashboardClient({
   }
 
   async function onChangeStatus(id: string, status: string) {
-    setError('');
-    setOk('');
     try {
       const token = await getAccessToken();
       const response = await fetch(`/api/requests/${id}/status`, {
@@ -373,17 +371,15 @@ export function DashboardClient({
       if (!response.ok) {
         throw new Error(payload.error ?? 'No se pudo cambiar estado');
       }
-      setOk('Estado actualizado');
+      addToast('success', `Solicitud ${status === 'approved' ? 'Aprobada' : 'Rechazada'}`);
       await loadData();
     } catch (e) {
-      setError((e as Error).message);
+      addToast('error', (e as Error).message);
     }
   }
 
   async function onCreateEvent(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError('');
-    setOk('');
     try {
       const token = await getAccessToken();
       const response = await fetch('/api/events', {
@@ -407,10 +403,10 @@ export function DashboardClient({
       setEventDetails('');
       setEventStartsAt('');
       setEventLocation('');
-      setOk('Evento de difusión publicado.');
+      addToast('success', 'Evento de difusión publicado.');
       await loadEvents();
     } catch (e) {
-      setError((e as Error).message);
+      addToast('error', (e as Error).message);
     }
   }
 
@@ -441,12 +437,30 @@ export function DashboardClient({
     return {
       todayMeetings: meetings.filter(m => m.starts_at.startsWith(today)).length,
       pendingRequests: rows.filter(r => r.status === 'pending').length,
-      activeEvents: events.length
+      activeEvents: events.length,
+      topics: rows.reduce<Record<string, number>>((acc, r) => {
+        acc[r.topic] = (acc[r.topic] || 0) + 1;
+        return acc;
+      }, {}),
+      neighborhoods: rows.reduce<Record<string, number>>((acc, r) => {
+        const n = r.neighborhood || 'Sin definir';
+        acc[n] = (acc[n] || 0) + 1;
+        return acc;
+      }, {})
     };
   }, [meetings, rows, events]);
 
   return (
     <div className="grid">
+      {/* Toast System */}
+      <div className="toast-container">
+        {toasts.map((t) => (
+          <div key={t.id} className={`toast toast-${t.type}`}>
+            {t.message}
+          </div>
+        ))}
+      </div>
+
       {/* Stats Bar */}
       <div className="stats-bar">
         <div className="stat-card">
@@ -463,8 +477,41 @@ export function DashboardClient({
         </div>
       </div>
 
+      {/* Insights Section */}
+      {isOps && (
+        <section className="card insights-panel">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px' }}>
+            <span style={{ fontSize: '1.5rem' }}>📊</span>
+            <h3 style={{ margin: 0 }}>Métricas de Impacto</h3>
+          </div>
+          <div className="grid grid-2">
+            <div>
+              <p className="small"><strong>Temas más recurrentes</strong></p>
+              <div className="insights-list">
+                {Object.entries(stats.topics).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([t, count]) => (
+                  <div key={t} className="insight-item">
+                    <span>{t}</span>
+                    <span className="insight-count">{count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="small"><strong>Barrios con mayor demanda</strong></p>
+              <div className="insights-list">
+                {Object.entries(stats.neighborhoods).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n, count]) => (
+                  <div key={n} className="insight-item">
+                    <span>{n}</span>
+                    <span className="insight-count">{count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       <div className="dash-layout">
-        {/* Left Column */}
         <div className="grid">
           <section className="card">
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
@@ -624,14 +671,11 @@ export function DashboardClient({
           </div>
         </div>
 
-        {/* Right Sidebar */}
         <div className="grid">
           <section className="card">
             <h2>Solicitudes Pendientes</h2>
             <p className="small">Gestión de turnos entrantes.</p>
             {loading ? <p className="small">Cargando...</p> : null}
-            {error ? <p className="error">{error}</p> : null}
-            {ok ? <p className="success">{ok}</p> : null}
             <div className="grid" style={{ marginTop: 10 }}>
               {rows.filter(r => r.status === 'pending' || isOps).map((r) => (
                 <article key={r.id} className={`card meeting-item ${r.status === 'pending' ? 'request-card' : 'approved-card'}`} style={{ padding: 14 }}>
