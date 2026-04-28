@@ -1,0 +1,51 @@
+project_name: "Agenda Reuniones Vecinos"
+product_type: "sistema de gestion de reuniones y agenda"
+business_mode: "Institucional / Participacion Ciudadana"
+canonical_app_path: "web/app/*"
+
+branding:
+  agency_name: "Nodo Ai Agency"
+  agency_url: "https://www.nodoai.co"
+  powered_by_required: true
+
+web:
+  framework: "Next.js 15 + React 18 + App Router"
+  language: "TypeScript"
+
+integrations:
+  telegram:
+    bot: "8636985755:AAGIG2djRirnfLziIrg8o7w-p-W1LoDjV0g"
+    bucket: "telegram-voice-notes"
+  calendar:
+    provider: "Google Calendar"
+
+backend:
+  platform: "Supabase + Next.js API routes"
+
+database:
+  engine: "PostgreSQL"
+
+auth:
+  provider: "Supabase Auth"
+
+analytics:
+  provider: "PostHog"
+
+observability:
+  providers:
+    - "Sentry"
+    - "Axiom"
+
+billing:
+  provider: "Stripe"
+  enabled: false
+
+hosting:
+  provider: "Vercel"
+  url: "https://agendavecionos.vercel.app"
+
+notes:
+  - "Proyecto de gestion de reuniones con integracion de Telegram para notas de voz."
+  - "Usa Google Calendar para la agenda."
+  - "Basado en arquitectura Next.js 15 y Supabase."
+  - "Modo zero-cost activo (OpenAI desactivado por ahora)."

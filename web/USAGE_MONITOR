@@ -1,0 +1,29 @@
+# USAGE MONITOR - Agenda Reuniones Vecinos
+
+## Sesión: 2026-04-21
+- Objetivo: Auditoría CORE + hardening funcional.
+- Chequeos ejecutados:
+  - `web`: `npm run qa` ✅
+  - `backend`: `npm run build` ✅
+- Operaciones infra ejecutadas:
+  - Supabase `link` al proyecto `ufcflwuwpsxxcmeyhbku` ✅
+  - SQL aplicado para tablas críticas (`broadcast_event`, `meeting_registry`, `telegram_identity`, `meeting_note`, `notification_log`) ✅
+  - `notify pgrst, 'reload schema'` ✅
+
+## Observaciones de eficiencia
+- No se detectaron scripts ejecutables en `1-CORE` (solo documentos normativos).
+- Auditoría se basó en contraste de estándares + evidencia de build/runtime.
+
+## Sesión: 2026-04-21 (Cierre Kaizen + Auditoría Completa)
+- Salida documental creada:
+  - `docs/CORE_FULL_AUDIT_2026-04-21.md`
+  - `docs/KAIZEN_RKC_2026-04-21.md`
+- Estado final: APTO CON DEUDA TÉCNICA CONTROLADA (semáforo amarillo).
+
+## Sesión: 2026-04-21 (Observabilidad 1-5 + Cierre)
+- Integración Sentry en Next.js (`instrumentation`, configs server/edge, global-error) ✅
+- Wrapper de observabilidad API (`withApiObservability`) aplicado a rutas críticas ✅
+- Endpoint de prueba controlada `/api/observability/test-error` creado ✅
+- Deploy producción completado y alias activo ✅
+- QA final (`npm run qa`) en verde ✅
+- Nota: variables `SENTRY_*` aún no visibles en Vercel production, por eso la verificación actual confirmó seguridad/rutas pero no evento Sentry remoto validado.
