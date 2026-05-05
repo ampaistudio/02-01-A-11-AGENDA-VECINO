@@ -16,6 +16,7 @@ import { withApiObservability } from '../../../../lib/api-observability';
 import { actorFromUser } from '../../../../lib/permissions';
 import { encodeReasonWithEventType, getEventTypeLabel, getEventTypeLocationFallback, normalizeEventType, type EventType } from '../../../../lib/event-type';
 import { parseTelegramAgendaMessage, type ParsedTelegramAgenda } from '../../../../lib/telegram-parser';
+import { parseIntentWithQwen } from '../../../../lib/ai-provider';
 
 type TelegramUpdate = {
   message?: {
@@ -23,6 +24,7 @@ type TelegramUpdate = {
     text?: string;
     caption?: string;
     voice?: { file_id: string };
+    photo?: { file_id: string; file_size?: number }[];
     from?: { id?: number; username?: string };
     chat?: { id?: number };
   };
@@ -158,8 +160,40 @@ export const POST = withApiObservability('api.telegram.webhook.post', async (req
     }
   }
 
-  const noteText = text ?? caption ?? transcript ?? '[voice_note]';
-  const parsedAgenda = parseTelegramAgendaMessage(noteText);
+  const noteText = text ?? caption ?? transcript ?? (message.photo ? '[photo]' : '[voice_note]');
+  let parsedAgenda = parseTelegramAgendaMessage(noteText);
+
+  // Kaizen: Fallback de IA si el parser por regex falla y hay texto
+  if (!parsedAgenda && (role === 'admin' || role === 'lider') && noteText && noteText.length > 20 && !noteText.includes('[photo]')) {
+    const aiResult = await parseIntentWithQwen(noteText);
+    if (aiResult && aiResult.eventType && aiResult.citizenName && aiResult.day && aiResult.month) {
+      // Convertir el resultado de IA al formato ParsedTelegramAgenda
+      const now = new Date();
+      const year = now.getFullYear();
+      const monthMap: Record<string, string> = { 'enero': '01', 'febrero': '02', 'marzo': '03', 'abril': '04', 'mayo': '05', 'junio': '06', 'julio': '07', 'agosto': '08', 'septiembre': '09', 'setiembre': '09', 'octubre': '10', 'noviembre': '11', 'diciembre': '12' };
+      const monthStr = monthMap[aiResult.month.toLowerCase()] || '01';
+      const dayStr = String(aiResult.day).padStart(2, '0');
+      const hourStr = String(aiResult.hour ?? 9).padStart(2, '0');
+      const minStr = String(aiResult.minute ?? 0).padStart(2, '0');
+      
+      const startsAt = new Date(`${year}-${monthStr}-${dayStr}T${hourStr}:${minStr}:00-03:00`).toISOString();
+      const endsAt = new Date(new Date(startsAt).getTime() + 30 * 60 * 1000).toISOString();
+
+      parsedAgenda = {
+        eventType: aiResult.eventType,
+        citizenName: aiResult.citizenName,
+        startsAt,
+        endsAt,
+        location: aiResult.location || getEventTypeLocationFallback(aiResult.eventType),
+        locality: aiResult.location || null,
+        reason: aiResult.topic || noteText,
+        detail: aiResult.detail || null,
+        originalText: noteText
+      };
+      
+      logStructured('telegram_ai_parser_success', { eventType: parsedAgenda.eventType, citizenName: parsedAgenda.citizenName });
+    }
+  }
 
   if (parsedAgenda && (role === 'admin' || role === 'lider')) {
     try {
@@ -300,7 +334,9 @@ export const POST = withApiObservability('api.telegram.webhook.post', async (req
     metadata: {
       telegram_message_id: message.message_id,
       telegram_from_id: message.from?.id,
-      telegram_username: message.from?.username ?? null
+      telegram_username: message.from?.username ?? null,
+      has_photo: Boolean(message.photo),
+      photo_file_id: message.photo ? message.photo[message.photo.length - 1].file_id : null
     }
   });
 

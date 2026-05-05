@@ -188,3 +188,21 @@ export async function createGoogleEvent(params: {
 
   return response.data.id;
 }
+
+export async function checkGoogleCalendarCollision(startsAt: string, endsAt: string): Promise<boolean> {
+  const config = getGoogleCalendarConfig();
+  if (!config.calendarId || !config.serviceEmail || !config.privateKey) return false;
+
+  const auth = buildGoogleJwt(config);
+  const calendar = google.calendar({ version: 'v3', auth });
+
+  const response = await calendar.events.list({
+    calendarId: config.calendarId,
+    timeMin: startsAt,
+    timeMax: endsAt,
+    singleEvents: true
+  });
+
+  return (response.data.items?.length ?? 0) > 0;
+}
+

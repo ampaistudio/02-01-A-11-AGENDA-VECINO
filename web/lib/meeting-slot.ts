@@ -1,4 +1,5 @@
 import { getSupabaseAdminClient } from './supabase-admin';
+import { checkGoogleCalendarCollision } from './google-calendar';
 
 const GAP_MINUTES = 30;
 const GAP_MS = GAP_MINUTES * 60 * 1000;
@@ -70,5 +71,17 @@ export async function assertMeetingSlotAvailable(startsAt: string, endsAt: strin
         'Ese horario está ocupado o demasiado cercano a otra reunión. Debe haber 30 minutos de intervalo entre reuniones.'
       );
     }
+  }
+
+  // Kaizen: Doble validación con Google Calendar
+  try {
+    const hasGoogleCollision = await checkGoogleCalendarCollision(startsAt, endsAt);
+    if (hasGoogleCollision) {
+      throw new Error('Existe una colisión directa en Google Calendar para este horario.');
+    }
+  } catch (e) {
+    // Si falla Google (ej: falta config), permitimos continuar si Supabase está limpio, 
+    // pero logueamos el error.
+    console.error('Google Calendar collision check failed:', e);
   }
 }
