@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { getSupabaseBrowserClient } from '../lib/supabase-browser';
+import { getEventTypeLabel, inferEventTypeFromReason, stripEventTypePrefix, type EventType } from '../lib/event-type';
 
 const TOPIC_OPTIONS = [
   'Servicios públicos',
@@ -37,14 +38,15 @@ type MeetingRow = {
   location: string | null;
   sync_status: string;
   google_event_id: string | null;
-    request?: {
-      citizen_name: string;
-      citizen_phone: string | null;
-      topic: string;
-      locality: string | null;
-      neighborhood: string | null;
-      status: string;
-    } | null;
+  request?: {
+    citizen_name: string;
+    citizen_phone: string | null;
+    topic: string;
+    reason?: string | null;
+    locality: string | null;
+    neighborhood: string | null;
+    status: string;
+  } | null;
 };
 
 type BroadcastEvent = {
@@ -112,6 +114,11 @@ export function DashboardClient({
   const [meetings, setMeetings] = useState<MeetingRow[]>([]);
   const [events, setEvents] = useState<BroadcastEvent[]>([]);
   const [loading, setLoading] = useState(false);
+  const [calendarAudit, setCalendarAudit] = useState<{
+    loading: boolean;
+    ready: boolean | null;
+    summary: string;
+  }>({ loading: false, ready: null, summary: '' });
   const [toasts, setToasts] = useState<{ id: string; type: 'success' | 'error' | 'info'; message: string }[]>([]);
 
   function addToast(type: 'success' | 'error' | 'info', message: string) {
@@ -124,6 +131,7 @@ export function DashboardClient({
 
   const [citizenName, setCitizenName] = useState('');
   const [citizenPhone, setCitizenPhone] = useState('');
+  const [eventType, setEventType] = useState<EventType>('reunion');
   const [topicOption, setTopicOption] = useState<(typeof TOPIC_OPTIONS)[number]>('Servicios públicos');
   const [topicOther, setTopicOther] = useState('');
   const [locality, setLocality] = useState<(typeof LOCALITY_OPTIONS)[number]>('Ushuaia');
@@ -201,9 +209,74 @@ export function DashboardClient({
     setEvents(payload.data ?? []);
   }
 
+  async function runCalendarAudit() {
+    if (!isOps) return;
+
+    setCalendarAudit({ loading: true, ready: null, summary: '' });
+    try {
+      const token = await getAccessToken();
+      const response = await fetch('/api/calendar/audit', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? 'No se pudo auditar Google Calendar');
+      }
+
+      const checks = payload.data?.checks ?? [];
+      const failing = checks.filter((check: { ok: boolean }) => !check.ok);
+      const summary =
+        failing.length === 0
+          ? 'Google Calendar listo: configuración, autenticación y acceso validados.'
+          : failing.map((check: { detail: string }) => check.detail).join(' ');
+
+      setCalendarAudit({
+        loading: false,
+        ready: Boolean(payload.data?.ready),
+        summary
+      });
+    } catch (e) {
+      const message = (e as Error).message;
+      setCalendarAudit({ loading: false, ready: false, summary: message });
+      addToast('error', message);
+    }
+  }
+
+  async function exportImpactReport(format: 'csv' | 'pdf') {
+    try {
+      const token = await getAccessToken();
+      const response = await fetch(`/api/reports/impact?format=${format}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload.error ?? `No se pudo exportar ${format.toUpperCase()}`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `impact-report.${format}`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(url);
+      addToast('success', `Reporte ${format.toUpperCase()} generado.`);
+    } catch (e) {
+      addToast('error', (e as Error).message);
+    }
+  }
+
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (isOps) {
+      runCalendarAudit();
+    }
+  }, [isOps]);
 
   useEffect(() => {
     setEndsAt(addMinutesToLocalDateTime(startsAt, 30));
@@ -273,6 +346,7 @@ export function DashboardClient({
         body: JSON.stringify({
           citizenName,
           citizenPhone,
+          eventType,
           topicOption,
           topicOther,
           locality,
@@ -291,6 +365,7 @@ export function DashboardClient({
       addToast('success', 'Solicitud y reunión agendadas. Recordatorios programados.');
       setCitizenName('');
       setCitizenPhone('');
+      setEventType('reunion');
       setTopicOption('Servicios públicos');
       setTopicOther('');
       setLocality('Ushuaia');
@@ -324,6 +399,7 @@ export function DashboardClient({
         body: JSON.stringify({
           citizenName,
           citizenPhone,
+          eventType,
           topic,
           reason,
           locality,
@@ -338,6 +414,7 @@ export function DashboardClient({
       addToast('success', 'Solicitud enviada. Queda pendiente de confirmación.');
       setCitizenName('');
       setCitizenPhone('');
+      setEventType('reunion');
       setTopicOption('Servicios públicos');
       setTopicOther('');
       setLocality('Ushuaia');
@@ -484,6 +561,14 @@ export function DashboardClient({
             <span style={{ fontSize: '1.5rem' }}>📊</span>
             <h3 style={{ margin: 0 }}>Métricas de Impacto</h3>
           </div>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '14px' }}>
+            <button className="secondary" type="button" onClick={() => exportImpactReport('csv')}>
+              Exportar CSV
+            </button>
+            <button className="secondary" type="button" onClick={() => exportImpactReport('pdf')}>
+              Exportar PDF
+            </button>
+          </div>
           <div className="grid grid-2">
             <div>
               <p className="small"><strong>Temas más recurrentes</strong></p>
@@ -510,6 +595,27 @@ export function DashboardClient({
           </div>
         </section>
       )}
+
+      {isOps ? (
+        <section className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div>
+              <h2 style={{ marginBottom: 4 }}>Auditoría Google Calendar</h2>
+              <p className="small">Chequea variables, autenticación y acceso real del calendario institucional.</p>
+            </div>
+            <button className="secondary" type="button" onClick={runCalendarAudit} disabled={calendarAudit.loading}>
+              {calendarAudit.loading ? 'Auditando...' : 'Revalidar'}
+            </button>
+          </div>
+          {calendarAudit.summary ? (
+            <p className={calendarAudit.ready ? 'success' : 'error'} style={{ marginTop: 12 }}>
+              {calendarAudit.summary}
+            </p>
+          ) : (
+            <p className="small" style={{ marginTop: 12 }}>Esperando auditoría inicial...</p>
+          )}
+        </section>
+      ) : null}
 
       <div className="dash-layout">
         <div className="grid">
@@ -539,6 +645,13 @@ export function DashboardClient({
                 />
               </div>
               <div className="row">
+                <label>Tipo</label>
+                <select value={eventType} onChange={(e) => setEventType(e.target.value as EventType)} required>
+                  <option value="reunion">Reunión</option>
+                  <option value="llamado">Llamado</option>
+                </select>
+              </div>
+              <div className="row">
                 <label>Tema</label>
                 <select value={topicOption} onChange={(e) => setTopicOption(e.target.value as (typeof TOPIC_OPTIONS)[number])} required>
                   {TOPIC_OPTIONS.map((t) => (
@@ -566,7 +679,7 @@ export function DashboardClient({
               </div>
               <div className="row" style={{ gridColumn: '1 / -1' }}><label>Motivo</label><textarea value={reason} onChange={(e) => setReason(e.target.value)} required /></div>
               <div className="row">
-                <label>{isOps ? 'Fecha y hora de reunión' : 'Fecha y hora solicitada'}</label>
+                <label>{isOps ? `Fecha y hora de ${eventType === 'llamado' ? 'llamado' : 'reunión'}` : 'Fecha y hora solicitada'}</label>
                 <input
                   className="big-datetime"
                   type="datetime-local"
@@ -600,6 +713,7 @@ export function DashboardClient({
                       <div key={meeting.id} className="calendar-row">
                         <span>{formatLocalDateTime(meeting.starts_at)} a {formatLocalDateTime(meeting.ends_at)}</span>
                         <strong>{meeting.request?.citizen_name ?? 'Ciudadano'}</strong>
+                        <span>{getEventTypeLabel(inferEventTypeFromReason(meeting.request?.reason))}</span>
                         <span>{meeting.request?.topic ?? 'Sin tema'}</span>
                       </div>
                     ))}
@@ -630,6 +744,7 @@ export function DashboardClient({
                       {meetingsByDay[day].map((meeting) => (
                         <div key={meeting.id} className="card meeting-item" style={{ padding: 10 }}>
                           <p><strong>{meeting.request?.citizen_name ?? 'Ciudadano'}</strong> - {meeting.request?.topic ?? 'Sin tema'}</p>
+                          <p className="small">Tipo: {getEventTypeLabel(inferEventTypeFromReason(meeting.request?.reason))}</p>
                           <p className="small">Tel: {meeting.request?.citizen_phone ?? 'Sin teléfono'}</p>
                           <p className="small">{meeting.request?.locality ?? 'Sin localidad'} / {meeting.request?.neighborhood ?? 'Sin barrio'}</p>
                           <p className="small">
@@ -683,7 +798,9 @@ export function DashboardClient({
                     <strong>{r.citizen_name}</strong>
                     <span className="status-pill">{r.status}</span>
                   </div>
+                  <p className="small">Tipo: {getEventTypeLabel(inferEventTypeFromReason(r.reason))}</p>
                   <p className="small">Tema: {r.topic}</p>
+                  <p className="small">Motivo: {stripEventTypePrefix(r.reason)}</p>
                   <p className="small">Tel: {r.citizen_phone}</p>
                   {r.preferred_datetime ? (
                     <p className="small"><strong>Sugerido:</strong> {formatLocalDateTime(r.preferred_datetime)}</p>

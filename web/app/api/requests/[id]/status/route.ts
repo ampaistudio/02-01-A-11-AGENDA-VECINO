@@ -8,6 +8,7 @@ import { actorFromUser, can } from '../../../../../lib/permissions';
 import { enforceRateLimit, safeTraceId } from '../../../../../lib/runtime-security';
 import { queueMeetingReminderNotifications, sendRequestChangeNotification } from '../../../../../lib/notifications';
 import { withApiObservability } from '../../../../../lib/api-observability';
+import { inferEventTypeFromReason } from '../../../../../lib/event-type';
 
 const StatusSchema = z.object({
   status: z.enum([
@@ -104,7 +105,7 @@ export const PATCH = withApiObservability(
 
   const { data: source, error: sourceError } = await supabaseAdmin
     .from('citizen_request')
-    .select('citizen_name, locality, neighborhood, topic, created_by_agent_id')
+    .select('citizen_name, locality, neighborhood, topic, reason, created_by_agent_id')
     .eq('id', id)
     .single();
   if (sourceError) {
@@ -139,7 +140,8 @@ export const PATCH = withApiObservability(
       locality: source?.locality ?? null,
       neighborhood: source?.neighborhood ?? null,
       startsAt: meeting?.starts_at ?? null,
-      location: meeting?.location ?? null
+      location: meeting?.location ?? null,
+      eventType: inferEventTypeFromReason(source?.reason)
     });
 
     if ((nextStatus === 'approved' || nextStatus === 'scheduled') && meeting) {

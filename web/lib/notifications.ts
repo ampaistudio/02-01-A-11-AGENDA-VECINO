@@ -2,6 +2,7 @@ import { getSupabaseAdminClient } from './supabase-admin';
 import { actorFromUser } from './permissions';
 import { findChatIdByUserId, sendTelegramMessage as sendTelegramMessageRaw } from './telegram';
 import type { ApiUser } from './api-auth';
+import { getEventTypeLabel, getEventTypeLocationFallback, inferEventTypeFromReason, type EventType } from './event-type';
 
 export async function sendTelegramMessage(chatId: string | undefined, text: string): Promise<boolean> {
   return sendTelegramMessageRaw(chatId, text);
@@ -49,19 +50,22 @@ export async function sendRequestChangeNotification(params: {
   neighborhood: string | null;
   startsAt?: string | null;
   location?: string | null;
+  eventType?: EventType;
 }): Promise<void> {
   const chatId = await findChatIdByUserId(params.userId);
   if (!chatId) return;
 
+  const resolvedType = params.eventType ?? 'reunion';
   const lines = [
     params.headline,
+    `Tipo: ${getEventTypeLabel(resolvedType)}`,
     `Con: ${params.citizenName}`,
     `Tema: ${params.topic}`,
     `Localidad: ${params.locality ?? 'Sin localidad'}`,
     `Barrio: ${params.neighborhood ?? 'Sin barrio'}`
   ];
   if (params.startsAt) lines.push(`Fecha y hora: ${formatReadableDateTime(params.startsAt)}`);
-  lines.push(`Lugar: ${params.location ?? 'Sin definir'}`);
+  lines.push(`Lugar: ${params.location ?? getEventTypeLocationFallback(resolvedType)}`);
   await sendTelegramMessageRaw(chatId, lines.join('\n'));
 }
 

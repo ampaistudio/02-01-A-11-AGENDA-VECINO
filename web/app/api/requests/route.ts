@@ -6,12 +6,14 @@ import { getSupabaseAdminClient } from '../../../lib/supabase-admin';
 import { actorFromUser, can } from '../../../lib/permissions';
 import { enforceRateLimit, safeTraceId } from '../../../lib/runtime-security';
 import { withApiObservability } from '../../../lib/api-observability';
+import { encodeReasonWithEventType } from '../../../lib/event-type';
 
 const CreateRequestSchema = z.object({
   citizenName: z.string().min(3),
   citizenPhone: z.string().min(6).optional(),
   topic: z.string().min(3),
   reason: z.string().min(5),
+  eventType: z.enum(['reunion', 'llamado']).default('reunion'),
   locality: z.string().min(2).optional(),
   neighborhood: z.string().min(2).optional(),
   territory: z.string().optional(),
@@ -68,7 +70,7 @@ export const POST = withApiObservability('api.requests.post', async (request: Ne
     citizen_name: parsed.data.citizenName,
     citizen_phone: parsed.data.citizenPhone ?? null,
     topic: parsed.data.topic,
-    reason: parsed.data.reason,
+    reason: encodeReasonWithEventType(parsed.data.reason, parsed.data.eventType),
     locality: parsed.data.locality ?? null,
     neighborhood: parsed.data.neighborhood ?? null,
     territory: parsed.data.territory ?? null,

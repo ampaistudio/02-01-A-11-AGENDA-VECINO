@@ -5,6 +5,7 @@ import { findChatIdByUserId } from '../../../../lib/telegram';
 import { logStructured } from '../../../../lib/runtime-security';
 import { withApiObservability } from '../../../../lib/api-observability';
 import { verifyCronBearer } from '../../../../lib/cron-auth';
+import { getEventTypeLabel, getEventTypeLocationFallback, inferEventTypeFromReason } from '../../../../lib/event-type';
 
 type NotificationRow = {
   id: string;
@@ -51,7 +52,7 @@ export const GET = withApiObservability('api.cron.reminders.get', async (request
 
     const meeting = await supabase
       .from('meeting')
-      .select('id, starts_at, location, request:citizen_request(citizen_name, topic)')
+      .select('id, starts_at, location, request:citizen_request(citizen_name, topic, reason)')
       .eq('id', row.entity_id)
       .maybeSingle();
 
@@ -62,16 +63,20 @@ export const GET = withApiObservability('api.cron.reminders.get', async (request
     }
 
     const chatId = await findChatIdByUserId(row.recipient_user_id);
-    const requestData = meeting.data.request as { citizen_name?: string; topic?: string } | null;
+    const requestData = meeting.data.request as { citizen_name?: string; topic?: string; reason?: string } | null;
+    const eventType = inferEventTypeFromReason(requestData?.reason);
 
     const ok = await sendTelegramMessage(
       chatId ?? undefined,
       [
-        row.template === 'meeting_reminder_24h' ? 'RECORDATORIO: FALTAN 24 HORAS' : 'RECORDATORIO: FALTAN 2 HORAS',
+        row.template === 'meeting_reminder_24h'
+          ? `RECORDATORIO DE ${getEventTypeLabel(eventType).toUpperCase()}: FALTAN 24 HORAS`
+          : `RECORDATORIO DE ${getEventTypeLabel(eventType).toUpperCase()}: FALTAN 2 HORAS`,
+        `Tipo: ${getEventTypeLabel(eventType)}`,
         `Con: ${requestData?.citizen_name ?? 'Sin nombre'}`,
         `Tema: ${requestData?.topic ?? 'Sin tema'}`,
         `Fecha y hora: ${formatReadableDateTime(meeting.data.starts_at)}`,
-        `Lugar: ${meeting.data.location ?? 'Sin definir'}`
+        `Lugar: ${meeting.data.location ?? getEventTypeLocationFallback(eventType)}`
       ].join('\n')
     );
 

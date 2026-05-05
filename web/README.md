@@ -26,6 +26,8 @@ Next.js App Router con:
 - `POST /api/meetings/schedule`
 - `GET /api/calendar/full`
 - `GET /api/calendar/mine`
+- `GET /api/calendar/audit` (admin/tl)
+- `GET /api/reports/impact?format=json|csv|pdf` (admin/tl)
 - `POST /api/telegram/identity` (admin)
 - `POST /api/telegram/webhook`
 - `GET /api/cron/reminders`

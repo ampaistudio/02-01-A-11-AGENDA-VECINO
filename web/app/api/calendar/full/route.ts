@@ -29,6 +29,7 @@ export const GET = withApiObservability('api.calendar.full.get', async (request:
         citizen_name,
         citizen_phone,
         topic,
+        reason,
         locality,
         neighborhood,
         status,

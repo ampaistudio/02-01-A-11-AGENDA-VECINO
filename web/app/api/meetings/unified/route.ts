@@ -9,10 +9,12 @@ import { assertMeetingSlotAvailable } from '../../../../lib/meeting-slot';
 import { actorFromUser, can } from '../../../../lib/permissions';
 import { enforceRateLimit, safeTraceId } from '../../../../lib/runtime-security';
 import { withApiObservability } from '../../../../lib/api-observability';
+import { encodeReasonWithEventType, getEventTypeLabel, getEventTypeLocationFallback } from '../../../../lib/event-type';
 
 const UnifiedSchema = z.object({
   citizenName: z.string().min(3),
   citizenPhone: z.string().min(6),
+  eventType: z.enum(['reunion', 'llamado']).default('reunion'),
   topicOption: z.string().min(1),
   topicOther: z.string().optional(),
   locality: z.enum(['Ushuaia', 'Tolhuin', 'Rio Grande', 'Puerto Almanza']),
@@ -66,7 +68,7 @@ export const POST = withApiObservability('api.meetings.unified.post', async (req
   const traceId = safeTraceId(request.headers.get('x-trace-id')) || crypto.randomUUID();
   const appUrl = getRequiredAppBaseUrl();
   const actor = actorFromUser(auth);
-  const { citizenName, citizenPhone, topicOption, topicOther, locality, neighborhood, reason, startsAt, endsAt, location } = parsed.data;
+  const { citizenName, citizenPhone, eventType, topicOption, topicOther, locality, neighborhood, reason, startsAt, endsAt, location } = parsed.data;
   const normalizedPhone = normalizePhone(citizenPhone);
   const phoneDigits = normalizedPhone.replace(/\D/g, '');
   if (phoneDigits.length < 10 || phoneDigits.length > 15) {
@@ -92,7 +94,7 @@ export const POST = withApiObservability('api.meetings.unified.post', async (req
       topic_other: topicOption === 'Otro' ? topicOther ?? null : null,
       locality,
       neighborhood,
-      reason,
+      reason: encodeReasonWithEventType(reason, eventType),
       priority: 3,
       status: 'pending_leader_approval',
       created_by_user_id: null,
@@ -112,11 +114,11 @@ export const POST = withApiObservability('api.meetings.unified.post', async (req
 
   try {
     googleEventId = await createGoogleEvent({
-      summary: `Reunion con ${requestRow.citizen_name}`,
-      description: `${requestRow.topic}\n\n${requestRow.reason}`,
+      summary: `${getEventTypeLabel(eventType)} con ${requestRow.citizen_name}`,
+      description: `${getEventTypeLabel(eventType)}\n${requestRow.topic}\n\n${requestRow.reason}`,
       startsAt,
       endsAt,
-      location
+      location: location || getEventTypeLocationFallback(eventType)
     });
     syncStatus = 'synced';
   } catch {
@@ -129,7 +131,7 @@ export const POST = withApiObservability('api.meetings.unified.post', async (req
       request_id: requestRow.id,
       starts_at: startsAt,
       ends_at: endsAt,
-      location: location ?? null,
+      location: location ?? getEventTypeLocationFallback(eventType),
       google_event_id: googleEventId,
       sync_status: syncStatus,
       created_by_user_id: null,
@@ -152,7 +154,7 @@ export const POST = withApiObservability('api.meetings.unified.post', async (req
     neighborhood: requestRow.neighborhood,
     starts_at: startsAt,
     ends_at: endsAt,
-    location: location ?? null,
+      location: location ?? getEventTypeLocationFallback(eventType),
     status: 'scheduled',
     created_by_agent_id: actor
   });
@@ -229,7 +231,8 @@ export const POST = withApiObservability('api.meetings.unified.post', async (req
     locality: requestRow.locality,
     neighborhood: requestRow.neighborhood,
     startsAt,
-    location: location ?? null
+      location: location ?? getEventTypeLocationFallback(eventType),
+      eventType
   });
 
   await queueMeetingReminderNotifications({

@@ -52,9 +52,9 @@ Toda IA o agente que retome este proyecto debe leer, en este orden:
 
 ## 5. No Negociables
 
-- `app/*` es la unica implementacion productiva activa.
+- `web/app/*` es la unica implementacion productiva activa.
 - No hardcodear secretos, tokens o credenciales.
-- No desarrollar funcionalidades productivas nuevas en `apps/web/*`.
+- No desarrollar funcionalidades productivas nuevas fuera de `web/app/*` y `web/*`.
 - Todo cambio con impacto funcional debe validar al menos tipado, lint y build.
 - Toda documentacion operativa interna debe centralizarse en `ops/*`.
 - Branding de `Nodo Ai Agency` obligatorio segun este documento.
@@ -63,8 +63,8 @@ Toda IA o agente que retome este proyecto debe leer, en este orden:
 
 ## 6. Estado Canonico del Proyecto
 
-- Aplicacion oficial activa: `app/*` en la raiz del repo.
-- `apps/web/*` queda fuera del flujo principal de desarrollo y se conserva solo como referencia historica hasta retiro formal.
+- Aplicacion oficial activa: `web/app/*` dentro de `web/`.
+- No existe una segunda app productiva canonica en este repo; cualquier referencia a `apps/web/*` o `app/*` como app activa debe considerarse legado desactualizado.
 - Todo cambio productivo de interfaz o logica de negocio debe implementarse en la app canonica de raiz.
 - Documento de respaldo: `docs/CANONICAL_APP_DECISION.md`.
 
@@ -245,7 +245,7 @@ Su objetivo es evitar que futuras IAs o agentes tengan que reconstruir desde cer
 
 ## 11. Responsabilidad por Carpetas
 
-- `app/*`: interfaz y rutas productivas canonicas
+- `web/app/*`: interfaz y rutas productivas canonicas
 - `lib/*`: logica reusable, servicios y utilidades de aplicacion
 - `packages/shared/*`: contratos, esquemas y tipos compartidos
 - `supabase/*`: migraciones, funciones y estructura de datos
@@ -272,7 +272,7 @@ Su objetivo es evitar que futuras IAs o agentes tengan que reconstruir desde cer
 - Separar la logica por dominios funcionales.
 - Evitar archivos excesivamente largos cuando la division mejore claridad y mantenimiento.
 - Favorecer modulos pequenos, explicitos y testeables.
-- No introducir una segunda implementacion productiva en `apps/web/*`.
+- No introducir una segunda implementacion productiva paralela fuera de `web/*`.
 
 ### 12.4 Frontend
 
@@ -341,7 +341,7 @@ Desde la raiz del proyecto:
 ## 19. Variables de Entorno
 
 - Ver `.env.example` en la raíz
-- Ver `apps/web/.env.example` si corresponde al flujo histórico
+- Ver `web/.env*` para configuracion activa del proyecto
 
 ## 20. Protocolo de Cierre de Sesión
 

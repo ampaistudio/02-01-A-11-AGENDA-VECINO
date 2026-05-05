@@ -8,8 +8,14 @@ import {
   uploadVoiceNoteToStorage,
   verifyTelegramWebhookSecret
 } from '../../../../lib/telegram';
+import { createGoogleEvent } from '../../../../lib/google-calendar';
+import { queueMeetingReminderNotifications } from '../../../../lib/notifications';
+import { assertMeetingSlotAvailable } from '../../../../lib/meeting-slot';
 import { enforceRateLimit, logStructured, safeTraceId } from '../../../../lib/runtime-security';
 import { withApiObservability } from '../../../../lib/api-observability';
+import { actorFromUser } from '../../../../lib/permissions';
+import { encodeReasonWithEventType, getEventTypeLabel, getEventTypeLocationFallback, normalizeEventType, type EventType } from '../../../../lib/event-type';
+import { parseTelegramAgendaMessage, type ParsedTelegramAgenda } from '../../../../lib/telegram-parser';
 
 type TelegramUpdate = {
   message?: {
@@ -38,6 +44,8 @@ function isCalendarLoadIntent(text: string | null | undefined): boolean {
   if (source.includes('#request:') || source.includes('#meeting:')) return true;
   return /(evento|reunion|reunión|llamado|recordatorio|agenda|calendario)/i.test(source);
 }
+
+// Parser implementation moved to web/lib/telegram-parser.ts
 
 export const POST = withApiObservability('api.telegram.webhook.post', async (request: NextRequest) => {
   const rate = enforceRateLimit({
@@ -151,6 +159,134 @@ export const POST = withApiObservability('api.telegram.webhook.post', async (req
   }
 
   const noteText = text ?? caption ?? transcript ?? '[voice_note]';
+  const parsedAgenda = parseTelegramAgendaMessage(noteText);
+
+  if (parsedAgenda && (role === 'admin' || role === 'lider')) {
+    try {
+      await assertMeetingSlotAvailable(parsedAgenda.startsAt, parsedAgenda.endsAt);
+    } catch (error) {
+      await sendTelegramMessage(chatId, `No pude agendar ${getEventTypeLabel(parsedAgenda.eventType).toLowerCase()}: ${(error as Error).message}`);
+      return NextResponse.json({ ok: true });
+    }
+
+    const actor = actorFromUser({ id: userId });
+    const topic = getEventTypeLabel(parsedAgenda.eventType);
+    const locality = parsedAgenda.locality ?? 'Ushuaia';
+    const neighborhood = locality;
+
+    const requestInsert = await supabase
+      .from('citizen_request')
+      .insert({
+        citizen_name: parsedAgenda.citizenName,
+        citizen_phone: null,
+        topic,
+        topic_option: topic,
+        topic_other: null,
+        locality,
+        neighborhood,
+        reason: encodeReasonWithEventType(parsedAgenda.detail ? `${parsedAgenda.reason}\nDetalle: ${parsedAgenda.detail}` : parsedAgenda.reason, parsedAgenda.eventType),
+        priority: 3,
+        status: 'scheduled',
+        created_by_user_id: null,
+        created_by_agent_id: actor,
+        updated_by_user_id: null,
+        updated_by_agent_id: actor,
+        trace_id: traceId
+      })
+      .select('id, citizen_name, citizen_phone, topic, locality, neighborhood, reason')
+      .single();
+
+    if (requestInsert.error || !requestInsert.data) {
+      return NextResponse.json({ error: requestInsert.error?.message ?? 'No se pudo crear solicitud desde Telegram.' }, { status: 500 });
+    }
+
+    let googleEventId: string | null = null;
+    let syncStatus = 'pending';
+
+    try {
+      googleEventId = await createGoogleEvent({
+        summary: `${getEventTypeLabel(parsedAgenda.eventType)} con ${parsedAgenda.citizenName}`,
+        description: `${getEventTypeLabel(parsedAgenda.eventType)}\nTema: ${parsedAgenda.reason}${parsedAgenda.detail ? `\nDetalle: ${parsedAgenda.detail}` : ''}\n\nTexto original:\n${parsedAgenda.originalText}`,
+        startsAt: parsedAgenda.startsAt,
+        endsAt: parsedAgenda.endsAt,
+        location: parsedAgenda.location ?? getEventTypeLocationFallback(parsedAgenda.eventType)
+      });
+      syncStatus = 'synced';
+    } catch {
+      syncStatus = 'failed';
+    }
+
+    const meetingInsert = await supabase
+      .from('meeting')
+      .insert({
+        request_id: requestInsert.data.id,
+        starts_at: parsedAgenda.startsAt,
+        ends_at: parsedAgenda.endsAt,
+        location: parsedAgenda.location ?? getEventTypeLocationFallback(parsedAgenda.eventType),
+        google_event_id: googleEventId,
+        sync_status: syncStatus,
+        created_by_user_id: null,
+        created_by_agent_id: actor,
+        trace_id: traceId
+      })
+      .select('id')
+      .single();
+
+    if (meetingInsert.error || !meetingInsert.data) {
+      return NextResponse.json({ error: meetingInsert.error?.message ?? 'No se pudo crear evento desde Telegram.' }, { status: 500 });
+    }
+
+    await supabase.from('meeting_registry').insert({
+      request_id: requestInsert.data.id,
+      requester_name: requestInsert.data.citizen_name,
+      requester_phone: requestInsert.data.citizen_phone ?? '',
+      topic: requestInsert.data.topic,
+      locality: requestInsert.data.locality,
+      neighborhood: requestInsert.data.neighborhood,
+      starts_at: parsedAgenda.startsAt,
+      ends_at: parsedAgenda.endsAt,
+      location: parsedAgenda.location ?? getEventTypeLocationFallback(parsedAgenda.eventType),
+      status: 'scheduled',
+      created_by_agent_id: actor
+    });
+
+    await queueMeetingReminderNotifications({
+      meetingId: meetingInsert.data.id,
+      requestId: requestInsert.data.id,
+      startsAt: parsedAgenda.startsAt,
+      recipientUserId: userId,
+      actor: { id: userId, email: '', role, sourceRole: role },
+      traceId
+    });
+
+    await supabase.from('audit_log').insert([
+      {
+        entity_name: 'citizen_request',
+        entity_id: requestInsert.data.id,
+        action: 'create_from_telegram_agenda',
+        payload: { event_type: parsedAgenda.eventType, source: 'telegram', sync_status: syncStatus },
+        actor_user_id: null,
+        actor_agent_id: actor,
+        trace_id: traceId
+      },
+      {
+        entity_name: 'meeting',
+        entity_id: meetingInsert.data.id,
+        action: 'schedule_from_telegram_agenda',
+        payload: { event_type: parsedAgenda.eventType, google_event_id: googleEventId, sync_status: syncStatus },
+        actor_user_id: null,
+        actor_agent_id: actor,
+        trace_id: traceId
+      }
+    ]);
+
+    await sendTelegramMessage(
+      chatId,
+      `${getEventTypeLabel(parsedAgenda.eventType)} agendado.\n${parsedAgenda.citizenName}\n${parsedAgenda.startsAt}\n${parsedAgenda.location ?? getEventTypeLocationFallback(parsedAgenda.eventType)}`
+    );
+
+    return NextResponse.json({ ok: true, created: 'scheduled_from_telegram' });
+  }
 
   const insert = await supabase.from('meeting_note').insert({
     request_id: refs.requestId,

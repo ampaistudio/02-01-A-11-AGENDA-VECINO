@@ -14,7 +14,7 @@ web:
 
 integrations:
   telegram:
-    bot: "8636985755:AAGIG2djRirnfLziIrg8o7w-p-W1LoDjV0g"
+    bot: "REDACTED_USE_ENV_TELEGRAM_BOT_TOKEN"
     bucket: "telegram-voice-notes"
   calendar:
     provider: "Google Calendar"
@@ -49,3 +49,4 @@ notes:
   - "Usa Google Calendar para la agenda."
   - "Basado en arquitectura Next.js 15 y Supabase."
   - "Modo zero-cost activo (OpenAI desactivado por ahora)."
+  - "La app canonica activa es web/app/*; cualquier referencia a app/* en ops debe considerarse desactualizada hasta corregirse."

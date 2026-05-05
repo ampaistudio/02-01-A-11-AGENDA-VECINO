@@ -9,6 +9,7 @@ import { actorFromUser, can } from '../../../../lib/permissions';
 import { enforceRateLimit, safeTraceId } from '../../../../lib/runtime-security';
 import { queueMeetingReminderNotifications } from '../../../../lib/notifications';
 import { withApiObservability } from '../../../../lib/api-observability';
+import { getEventTypeLabel, getEventTypeLocationFallback, inferEventTypeFromReason } from '../../../../lib/event-type';
 
 const ScheduleSchema = z.object({
   requestId: z.string().uuid(),
@@ -59,16 +60,17 @@ export const POST = withApiObservability('api.meetings.schedule.post', async (re
 
   const traceId = safeTraceId(request.headers.get('x-trace-id')) || crypto.randomUUID();
   const actor = actorFromUser(auth);
+  const eventType = inferEventTypeFromReason(source.reason);
   let googleEventId: string | null = null;
   let syncStatus = 'pending';
 
   try {
     googleEventId = await createGoogleEvent({
-      summary: `Reunion con ${source.citizen_name}`,
-      description: `${source.topic}\n\n${source.reason}`,
+      summary: `${getEventTypeLabel(eventType)} con ${source.citizen_name}`,
+      description: `${getEventTypeLabel(eventType)}\n${source.topic}\n\n${source.reason}`,
       startsAt,
       endsAt,
-      location
+      location: location || getEventTypeLocationFallback(eventType)
     });
     syncStatus = 'synced';
   } catch {
@@ -81,7 +83,7 @@ export const POST = withApiObservability('api.meetings.schedule.post', async (re
       request_id: requestId,
       starts_at: startsAt,
       ends_at: endsAt,
-      location: location ?? null,
+      location: location ?? getEventTypeLocationFallback(eventType),
       google_event_id: googleEventId,
       sync_status: syncStatus,
       created_by_user_id: null,
@@ -138,7 +140,7 @@ export const POST = withApiObservability('api.meetings.schedule.post', async (re
         neighborhood: requestForRegistry.neighborhood ?? 'Sin barrio',
         starts_at: startsAt,
         ends_at: endsAt,
-        location: location ?? null,
+        location: location ?? getEventTypeLocationFallback(eventType),
         status: 'scheduled',
         created_by_agent_id: actor
       },
