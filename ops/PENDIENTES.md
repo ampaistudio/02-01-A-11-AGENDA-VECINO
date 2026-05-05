@@ -1,7 +1,7 @@
 # PENDIENTES - AGENDA REUNIONES VECINOS
 
-Ultima actualizacion general: `2026-05-05 15:15 -03`
-Estado de consistencia: `AUDITADO - FULL SYNC (GIT + DOCS)`
+Ultima actualizacion general: `2026-05-05 15:53 -03`
+Estado de consistencia: `OPERATIVO - DB AUDITED - FINAL SYNCED`
 
 ## Completado (Rescate y Mejora KAIZEN)
 
@@ -27,6 +27,7 @@ Estado de consistencia: `AUDITADO - FULL SYNC (GIT + DOCS)`
 - [x] `2026-04-28 16:25` Unificar documentación operativa para que la app canónica sea `web/app/*` en todo `ops`.
 - [x] `2026-05-05 13:10` Sincronización completa con repositorio remoto (Push exitoso).
 - [x] `2026-05-05 13:14` Auditoría profunda de arquitectura y seguridad completada.
+- [x] `2026-05-05 15:35` Auditoría de base de datos y documentación de esquema (`ops/DATABASE_SCHEMA.md`).
 - [ ] `2026-04-28 16:25` Rotar en proveedores externos las credenciales que quedaron expuestas históricamente y reemitirlas fuera del repo.
 - [x] `2026-05-05 12:52` Validar punta a punta Telegram voz/texto -> registro -> Google Calendar -> recordatorio (Smoke Test - Unit Tests).
 - [ ] `2026-05-05 13:18` Implementar integración con Qwen 2.5 vía OpenRouter (Zero-cost AI).
