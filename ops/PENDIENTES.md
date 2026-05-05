@@ -1,7 +1,7 @@
 # PENDIENTES - AGENDA REUNIONES VECINOS
 
-Ultima actualizacion general: `2026-05-05 12:52 -03`
-Estado de consistencia: `OPERATIVO - SMOKE TEST PASSED & REFACTORED`
+Ultima actualizacion general: `2026-05-05 13:18 -03`
+Estado de consistencia: `OPERATIVO - ROADMAP REFINED (QWEN + PWA)`
 
 ## Completado (Rescate y Mejora KAIZEN)
 
@@ -25,8 +25,12 @@ Estado de consistencia: `OPERATIVO - SMOKE TEST PASSED & REFACTORED`
 - [x] `2026-04-28 15:35` Implementar exportación de reportes de impacto en CSV/PDF.
 - [x] `2026-04-28 16:25` Sanear archivos `.env.vercel.*` versionados para quitar secretos del repositorio.
 - [x] `2026-04-28 16:25` Unificar documentación operativa para que la app canónica sea `web/app/*` en todo `ops`.
+- [x] `2026-05-05 13:10` Sincronización completa con repositorio remoto (Push exitoso).
+- [x] `2026-05-05 13:14` Auditoría profunda de arquitectura y seguridad completada.
 - [ ] `2026-04-28 16:25` Rotar en proveedores externos las credenciales que quedaron expuestas históricamente y reemitirlas fuera del repo.
 - [x] `2026-05-05 12:52` Validar punta a punta Telegram voz/texto -> registro -> Google Calendar -> recordatorio (Smoke Test - Unit Tests).
+- [ ] `2026-05-05 13:18` Implementar integración con Qwen 2.5 vía OpenRouter (Zero-cost AI).
+- [ ] `2026-05-05 13:18` Configurar PWA y estrategia de cache offline para Next.js.
 - [ ] `2026-05-05 12:45` Limpiar archivo `web/.env.vercel.test` del repositorio (Git rm --cached).
 
 ### Formato propuesto

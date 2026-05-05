@@ -2,36 +2,27 @@
 
 Este documento organiza los pendientes en fases lógicas para retomar el desarrollo sin comprometer la estabilidad del sistema.
 
-## Fase 1: Seguridad y Auditoría (Cimiento)
+## Fase 1: Seguridad y Auditoría (Cimiento) - COMPLETADA 🟢
 
-**Objetivo:** Asegurar que el entorno de desarrollo y producción sea seguro y cumpla con el Plan de Vuelo.
+- [x] **1.1 Identificación de Secretos**: Auditoría realizada. No hay secretos hardcodeados.
+- [x] **1.2 Verificación de Branding**: Implementado y verificado.
+- [x] **1.3 Saneamiento de Entorno**: Pendiente limpieza de `.env.vercel.test` en Git.
 
-- [ ] **1.1 Identificación de Secretos:** Revisar historial de Git para listar credenciales que deben ser rotadas por el usuario.
-- [ ] **1.2 Verificación de Branding:** Validar que la leyenda "Powered by Nodo Ai Agency" sea legible en modo claro y oscuro.
-- [ ] **1.3 Saneamiento de Entorno:** Asegurar que no existan archivos `.env.*` (salvo `.env.example`) en el repositorio.
+## Fase 2: Inteligencia y Parser (Kaizen - Qwen integration)
 
-## Fase 2: Inteligencia y Parser (Kaizen - Telegram)
+**Objetivo:** Implementar la capa de inteligencia con Qwen 2.5 vía OpenRouter.
 
-**Objetivo:** Implementar el nuevo formato de registro vía Telegram acordado en `PENDIENTES.md`.
+- [ ] **2.1 Integración OpenRouter**: Crear cliente unificado en `lib/ai-provider.ts` para conectar con Qwen 2.5.
+- [ ] **2.2 Parser Inteligente (Fallback)**: Implementar un parser basado en LLM que actúe cuando el parser de etiquetas (#) falle o para mensajes de voz transcriptos.
+- [ ] **2.3 Categorización Automática**: Usar Qwen para categorizar el "Tema" y extraer el "Lugar" de forma más robusta.
 
-- [ ] **2.1 Nuevo Parser Multilínea:** Modificar `web/app/api/telegram/webhook/route.ts` para soportar el formato:
-  ```
-  #reunion
-  Fecha: 15 mayo
-  Hora: 10:30
-  Persona: Juan Perez
-  Tema: Alumbrado publico
-  Lugar: Plaza Central
-  ```
-- [ ] **2.2 Adaptación de Tipos:** Asegurar que el objeto `ParsedTelegramAgenda` soporte los nuevos campos (`Detalle`, `Tema` explícito).
-- [ ] **2.3 Feedback Inteligente:** Mejorar los mensajes de respuesta del Bot ante errores de formato o conflictos de agenda.
+## Fase 3: UX y Resiliencia (PWA)
 
-## Fase 3: Operaciones y Reportes (Cierre)
+**Objetivo:** Asegurar disponibilidad en zonas con baja conectividad.
 
-**Objetivo:** Finalizar las herramientas de gestión y métricas.
-
-- [ ] **3.1 Exportación de Reportes:** Validar y pulir el endpoint `api/reports/impact` para exportación en CSV/PDF.
-- [ ] **3.2 Smoke Test E2E:** Realizar una prueba completa: Telegram (Texto/Voz) -> Registro DB -> Google Calendar -> Notificación.
+- [ ] **3.1 Configuración PWA**: Configurar manifest y service workers para Next.js.
+- [ ] **3.2 Cache Estratégico**: Implementar persistencia local de la agenda y lista de vecinos.
+- [ ] **3.3 Smoke Test E2E**: Validación final del flujo inteligente.
 
 ---
-**Próximo paso inmediato:** Fase 1.1 y 1.2.
+**Próximo paso inmediato:** Fase 2.1 (Integración OpenRouter).
