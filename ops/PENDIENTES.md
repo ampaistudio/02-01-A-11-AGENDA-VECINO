@@ -1,7 +1,8 @@
 # PENDIENTES - AGENDA REUNIONES VECINOS
 
-Ultima actualizacion general: `2026-05-05 16:16 -03`
-Estado de consistencia: `FINALIZADO - KAIZEN 10 IMPLEMENTED - 100% SYNCED`
+Ultima actualizacion general: `2026-05-26 20:21 -03`
+Ultimo restore validado: `ops/restore-points/RESTORE_POINT_2026-05-05_1616_kaizen_completed.md`
+Estado de consistencia: `AUDITADO - Pendientes reales depurados`
 
 ## Completado (Rescate y Mejora KAIZEN)
 
@@ -32,7 +33,8 @@ Estado de consistencia: `FINALIZADO - KAIZEN 10 IMPLEMENTED - 100% SYNCED`
 - [x] `2026-05-05 13:18` Implementar integración con Qwen 2.5 vía OpenRouter (Zero-cost AI).
 - [x] `2026-05-05 13:18` Configurar PWA y estrategia de cache offline para Next.js.
 - [x] `2026-05-05 16:10` Implementar validación cruzada GCalendar + Supabase y soporte multimedia en Telegram.
-- [ ] `2026-05-05 12:45` Limpiar archivo `web/.env.vercel.test` del repositorio (Git rm --cached).
+- [x] `2026-05-05 12:45` Limpiar archivo `web/.env.vercel.test` del repositorio (Git rm --cached).
+- [x] `2026-05-26 19:51` Remover también `web/.env.vercel.local` y `web/.env.vercel.production` del índice Git y bloquear `web/.env.vercel.*` en `.gitignore`.
 
 ### Formato propuesto
 
