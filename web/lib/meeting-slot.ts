@@ -1,5 +1,6 @@
 import { getSupabaseAdminClient } from './supabase-admin';
 import { checkGoogleCalendarCollision } from './google-calendar';
+import { logStructured } from './runtime-security';
 
 const GAP_MINUTES = 30;
 const GAP_MS = GAP_MINUTES * 60 * 1000;
@@ -80,8 +81,9 @@ export async function assertMeetingSlotAvailable(startsAt: string, endsAt: strin
       throw new Error('Existe una colisión directa en Google Calendar para este horario.');
     }
   } catch (e) {
-    // Si falla Google (ej: falta config), permitimos continuar si Supabase está limpio, 
-    // pero logueamos el error.
-    console.error('Google Calendar collision check failed:', e);
+    // Si falla Google (ej: falta config), permitimos continuar si Supabase está limpio.
+    logStructured('calendar_collision_check_failed', {
+      error: e instanceof Error ? e.message : 'unknown_error'
+    });
   }
 }

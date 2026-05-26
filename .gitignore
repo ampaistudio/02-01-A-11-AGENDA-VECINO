@@ -4,3 +4,6 @@ node_modules/
 .DS_Store
 dist/
 *.log
+web/.env.vercel.local
+web/.env.vercel.production
+web/.env.vercel.test

@@ -1,0 +1,88 @@
+{
+  "large_files": [
+    {
+      "file": "web/components/dashboard-client.tsx",
+      "lines": 823
+    }
+  ],
+  "hardcoded_colors": [
+    {
+      "file": "web/app/layout.tsx",
+      "line": 9,
+      "content": "themeColor: '#2563eb',"
+    }
+  ],
+  "any_usage": [],
+  "console_logs": [
+    {
+      "file": "web/lib/meeting-slot.ts",
+      "line": 85,
+      "content": "console.error('Google Calendar collision check failed:', e);"
+    },
+    {
+      "file": "backend/src/create_test_user.js",
+      "line": 9,
+      "content": "console.log('Creating test user...');"
+    },
+    {
+      "file": "backend/src/create_test_user.js",
+      "line": 28,
+      "content": "console.log('User already exists, ready to go.');"
+    },
+    {
+      "file": "backend/src/create_test_user.js",
+      "line": 30,
+      "content": "console.error('Error creating user:', error);"
+    },
+    {
+      "file": "backend/src/create_test_user.js",
+      "line": 33,
+      "content": "console.log('User created successfully:', data.user?.id);"
+    },
+    {
+      "file": "backend/src/create_test_user.ts",
+      "line": 9,
+      "content": "console.log('Creating test user...');"
+    },
+    {
+      "file": "backend/src/create_test_user.ts",
+      "line": 20,
+      "content": "console.log('User already exists, ready to go.');"
+    },
+    {
+      "file": "backend/src/create_test_user.ts",
+      "line": 22,
+      "content": "console.error('Error creating user:', error);"
+    },
+    {
+      "file": "backend/src/create_test_user.ts",
+      "line": 25,
+      "content": "console.log('User created successfully:', data.user?.id);"
+    }
+  ],
+  "todos_fixmes": [
+    {
+      "file": "web/components/dashboard-client.tsx",
+      "line": 764,
+      "content": "<p className=\"small\">Calendario general de eventos para todos los usuarios.</p>"
+    },
+    {
+      "file": "backend/src/scraper.py",
+      "line": 61,
+      "content": "# Fallback: todos los parrafos de la pagina"
+    },
+    {
+      "file": "backend/src/scraper.py",
+      "line": 116,
+      "content": "\"\"\"Scraping completo de todos los portales TDF en paralelo.\"\"\""
+    },
+    {
+      "file": "backend/src/redactor.py",
+      "line": 172,
+      "content": "logger.error(\"Todos los modelos Groq fallaron\")"
+    }
+  ],
+  "hardcoded_strings": [],
+  "missing_error_handling": [],
+  "direct_supabase_anon": []
+}
