@@ -31,7 +31,7 @@ ANY_TYPE = re.compile(r':\s*any[\s,;\)\>]')
 CONSOLE = re.compile(r'console\.(log|warn|error|debug)\(')
 TODO = re.compile(r'(TODO|FIXME|HACK|XXX)', re.IGNORECASE)
 ANON_KEY = re.compile(r'anon.*key|eyJ', re.IGNORECASE)
-HARDCODED_VERTICAL = re.compile(r'"instituto"|"default_vertical"', re.IGNORECASE)
+HARDCODED_VERTICAL = re.compile(r'"agenda_vecinos"|"default_vertical"', re.IGNORECASE)
 
 def scan_file(path: Path):
     try:
