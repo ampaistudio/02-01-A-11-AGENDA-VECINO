@@ -71,7 +71,7 @@ PROBLEMAS BAJO (deuda técnica)
 [BAJO-001] TODO/FIXME detectados en utilitarios y textos.
 [BAJO-002] Referencias duplicadas de búsqueda en auditoría automática.
 [BAJO-003] Falta tabla unificada de trazabilidad de auditorías en `ops`.
-[BAJO-004] Convención de nombres de auditoría arrastrada desde template (“INSTITUTO”).
+[BAJO-004] Convención de nombres de auditoría arrastrada desde template heredado.
 
 PLAN DE REMEDIACIÓN
 Sprint 1 — Críticos (esta semana)
