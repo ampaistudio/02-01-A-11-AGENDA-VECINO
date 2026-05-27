@@ -149,6 +149,9 @@ export function DashboardClient({
   const [eventDetails, setEventDetails] = useState('');
   const [eventStartsAt, setEventStartsAt] = useState('');
   const [eventLocation, setEventLocation] = useState('');
+  const [whatsAppMessage, setWhatsAppMessage] = useState('Hola, te compartimos novedades de Agenda Vecinos.');
+  const [waSyncing, setWaSyncing] = useState(false);
+  const [waSending, setWaSending] = useState(false);
   const isOps = role === 'admin' || role === 'lider';
 
   async function getAccessToken(): Promise<string> {
@@ -239,6 +242,46 @@ export function DashboardClient({
       const message = (e as Error).message;
       setCalendarAudit({ loading: false, ready: false, summary: message });
       addToast('error', message);
+    }
+  }
+
+  async function syncWhatsAppContacts() {
+    setWaSyncing(true);
+    try {
+      const token = await getAccessToken();
+      const response = await fetch('/api/whatsapp/sync-contacts', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? 'No se pudo sincronizar contactos');
+      addToast('success', `Contactos sincronizados: ${payload.upserted ?? 0}`);
+    } catch (e) {
+      addToast('error', (e as Error).message);
+    } finally {
+      setWaSyncing(false);
+    }
+  }
+
+  async function sendWhatsAppBroadcast() {
+    setWaSending(true);
+    try {
+      const token = await getAccessToken();
+      const response = await fetch('/api/whatsapp/notify', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({ message: whatsAppMessage, onlyUpcoming: true, limit: 200 })
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? 'No se pudo enviar WhatsApp');
+      addToast('success', `WhatsApp enviados: ${payload.sent ?? 0}/${payload.total ?? 0}`);
+    } catch (e) {
+      addToast('error', (e as Error).message);
+    } finally {
+      setWaSending(false);
     }
   }
 
@@ -617,6 +660,25 @@ export function DashboardClient({
         </section>
       ) : null}
 
+      {isOps ? (
+        <section className="card">
+          <h2>Módulo WhatsApp</h2>
+          <p className="small">Sincroniza contactos desde reuniones y envía difusión masiva.</p>
+          <div className="grid" style={{ marginTop: 10 }}>
+            <button className="secondary" type="button" onClick={syncWhatsAppContacts} disabled={waSyncing}>
+              {waSyncing ? 'Sincronizando contactos...' : 'Sincronizar contactos de reuniones'}
+            </button>
+            <div className="row">
+              <label>Mensaje de difusión</label>
+              <textarea value={whatsAppMessage} onChange={(e) => setWhatsAppMessage(e.target.value)} />
+            </div>
+            <button type="button" onClick={sendWhatsAppBroadcast} disabled={waSending || !whatsAppMessage.trim()}>
+              {waSending ? 'Enviando WhatsApp...' : 'Enviar difusión por WhatsApp'}
+            </button>
+          </div>
+        </section>
+      ) : null}
+
       <div className="dash-layout">
         <div className="grid">
           <section className="card">
@@ -788,6 +850,9 @@ export function DashboardClient({
 
         <div className="grid">
           <section className="card">
+            <div className="brand-wrap" style={{ justifyItems: 'start', marginBottom: 8 }}>
+              <img className="brand-logo" src="/par-logo.jpg" alt="PAR - Partido Arraigo y Renovación" />
+            </div>
             <h2>Solicitudes Pendientes</h2>
             <p className="small">Gestión de turnos entrantes.</p>
             {loading ? <p className="small">Cargando...</p> : null}

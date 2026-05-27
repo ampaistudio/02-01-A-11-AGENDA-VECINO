@@ -80,15 +80,15 @@ export function parseTelegramAgendaMessage(input: string | null | undefined): Pa
         const parsedDate = parseArgentineDate(day, monthText, hour, minute);
         if (parsedDate) {
           const citizenName = data.persona;
-          const location = data.lugar || (eventType === 'llamado' ? getEventTypeLocationFallback(eventType) : null);
-          const locality = data.lugar ? inferLocalityFromLocation(data.lugar) : (eventType === 'llamado' ? data.lugar : null);
+          const location = data.lugar || data.local || (eventType === 'llamado' ? getEventTypeLocationFallback(eventType) : null);
+          const locality = eventType === 'llamado' ? null : inferLocalityFromLocation(location);
 
           return {
             eventType,
             startsAt: parsedDate.startsAt,
             endsAt: parsedDate.endsAt,
             citizenName,
-            locality: locality || (eventType === 'llamado' ? data.lugar || null : null),
+            locality,
             location,
             reason: data.tema || source,
             detail: data.detalle || null,
@@ -121,8 +121,8 @@ export function parseTelegramAgendaMessage(input: string | null | undefined): Pa
     const localMatch = rest.match(/^(.*?)\s+Local\s+(.+)$/i);
     if (localMatch) {
       citizenName = localMatch[1]?.trim() ?? '';
-      locality = localMatch[2]?.trim() ?? null;
-      location = getEventTypeLocationFallback(eventType);
+      locality = null;
+      location = localMatch[2]?.trim() ?? getEventTypeLocationFallback(eventType);
     } else {
       citizenName = rest;
       location = getEventTypeLocationFallback(eventType);

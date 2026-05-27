@@ -10,6 +10,16 @@ export interface ApiUser {
 }
 
 export async function requireApiUser(authHeader: string | null): Promise<ApiUser | NextResponse> {
+  const bypassAuth = process.env.DEV_LOCAL_BYPASS_AUTH === '1';
+  if (bypassAuth) {
+    return {
+      id: '00000000-0000-0000-0000-000000000001',
+      email: 'demo.admin@agenda.local',
+      role: 'admin',
+      sourceRole: 'admin'
+    };
+  }
+
   if (!authHeader?.startsWith('Bearer ')) {
     return NextResponse.json({ error: 'Missing bearer token' }, { status: 401 });
   }

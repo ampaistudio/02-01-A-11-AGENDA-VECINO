@@ -4,6 +4,23 @@ import { getTrustedSupabaseRole, resolveRoleByEmailAndMetadata } from '../../lib
 import { getSupabaseServerClient } from '../../lib/supabase-server';
 
 export default async function DashboardPage() {
+  const bypassAuth = process.env.DEV_LOCAL_BYPASS_AUTH === '1';
+  if (bypassAuth) {
+    return (
+      <main className="container">
+        <div className="brand-wrap" style={{ justifyItems: 'start', marginBottom: 4 }}>
+          <img className="brand-logo" src="/par-logo.jpg" alt="PAR - Partido Arraigo y Renovación" />
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <h1>Panel Operativo</h1>
+          <p className="small">Sesión: demo.admin@agenda.local (modo local)</p>
+        </div>
+        <LocalDateTime />
+        <DashboardClient canManageStatus role="admin" />
+      </main>
+    );
+  }
+
   const supabase = await getSupabaseServerClient();
   const {
     data: { user }

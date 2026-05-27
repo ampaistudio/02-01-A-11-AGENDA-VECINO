@@ -34,11 +34,24 @@ test('telegram parser handles llamado format correctly', () => {
 Fecha: 20 mayo
 Hora: 15:00
 Persona: Maria Garcia
-Tema: Consulta de tramite`;
+Tema: Consulta de tramite
+Lugar: Local Rio Grande`;
 
   const result = parseTelegramAgendaMessage(input);
   assert.ok(result);
   assert.equal(result.eventType, 'llamado');
   assert.equal(result.citizenName, 'Maria Garcia');
-  assert.equal(result.location, 'Llamado telefónico');
+  assert.equal(result.location, 'Local Rio Grande');
+  assert.equal(result.locality, null);
+  assert.equal(result.reason, 'Consulta de tramite');
+});
+
+test('telegram parser treats "Local" token as commercial place in single-line llamado', () => {
+  const input = '#llamado 29 mayo 15hs Luis Miguel Local Rio Grande';
+  const result = parseTelegramAgendaMessage(input);
+  assert.ok(result);
+  assert.equal(result.eventType, 'llamado');
+  assert.equal(result.citizenName, 'Luis Miguel');
+  assert.equal(result.location, 'Rio Grande');
+  assert.equal(result.locality, null);
 });

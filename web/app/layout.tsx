@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { AccessibilityControls } from '../components/accessibility-controls';
+import { DESIGN_TOKENS } from '../lib/design-tokens';
 
 export const metadata: Metadata = {
   title: 'Agenda Reuniones Vecinos',
   description: 'Panel privado de gestion de reuniones vecinales de Nodo Ai Agency',
   manifest: '/manifest.json',
-  themeColor: '#2563eb',
+  themeColor: DESIGN_TOKENS.brandPrimary,
   viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0',
   appleWebApp: {
     capable: true,

@@ -16,6 +16,10 @@ type CookieToSet = {
 };
 
 export async function middleware(request: NextRequest) {
+  if (process.env.DEV_LOCAL_BYPASS_AUTH === '1') {
+    return NextResponse.next({ request });
+  }
+
   const response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -55,5 +59,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)']
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)']
 };
